@@ -9,7 +9,7 @@ import pandas as pd  # type: ignore
 from . import config as spadlconfig
 
 
-def _fix_clearances(actions: pd.DataFrame) -> pd.DataFrame:
+def _fix_clearances_sa(actions: pd.DataFrame) -> pd.DataFrame:
     next_actions = actions.shift(-1)
     next_actions[-1:] = actions[-1:]
     clearance_idx = actions.type_id == spadlconfig.actiontypes.index('clearance')
@@ -18,8 +18,25 @@ def _fix_clearances(actions: pd.DataFrame) -> pd.DataFrame:
 
     return actions
 
+def _fix_clearances(actions: pd.DataFrame) -> pd.DataFrame:
+    next_actions = actions.shift(-1)
+    next_actions[-1:] = actions[-1:]
+    clearance_idx = actions["type_primary"] == 'clearance'
+    actions.loc[clearance_idx, 'end_x'] = next_actions[clearance_idx].start_x.values
+    actions.loc[clearance_idx, 'end_y'] = next_actions[clearance_idx].start_y.values
 
-def _fix_direction_of_play(actions: pd.DataFrame, home_team_id: int) -> pd.DataFrame:
+    return actions
+
+def _fix_direction_of_play(actions: pd.DataFrame) -> pd.DataFrame:
+    away_idx = (actions.team_id != actions.home_team_id).values
+    for col in ['start_x', 'end_x']:
+        actions.loc[away_idx, col] = spadlconfig.field_length - actions[away_idx][col].values
+    for col in ['start_y', 'end_y']:
+        actions.loc[away_idx, col] = spadlconfig.field_width - actions[away_idx][col].values
+
+    return actions
+
+def _fix_direction_of_play_sa(actions: pd.DataFrame, home_team_id: int) -> pd.DataFrame:
     away_idx = (actions.team_id != home_team_id).values
     for col in ['start_x', 'end_x']:
         actions.loc[away_idx, col] = spadlconfig.field_length - actions[away_idx][col].values

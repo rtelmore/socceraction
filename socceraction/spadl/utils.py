@@ -1,6 +1,6 @@
 """Utility functions for working with SPADL dataframes."""
 from pandera.typing import DataFrame
-
+import pandas as pd
 from . import config as spadlconfig
 from .schema import SPADLSchema
 
@@ -28,7 +28,7 @@ def add_names(actions: DataFrame[SPADLSchema]) -> DataFrame[SPADLSchema]:
     )
 
 
-def play_left_to_right(
+def play_left_to_right_sa(
     actions: DataFrame[SPADLSchema], home_team_id: int
 ) -> DataFrame[SPADLSchema]:
     """Perform all action in the same playing direction.
@@ -55,3 +55,27 @@ def play_left_to_right(
     for col in ['start_y', 'end_y']:
         ltr_actions.loc[away_idx, col] = spadlconfig.field_width - actions[away_idx][col].values
     return ltr_actions
+
+def play_left_to_right(actions: pd.DataFrame) -> pd.DataFrame:
+    """Perform all action in the same playing direction.
+    This changes the start and end location of each action, such that all actions
+    are performed as if the team plays from left to right.
+    Parameters
+    ----------
+    actions : pd.DataFrame
+        The SPADL actins of a game.
+    home_team_id : int
+        The ID of the home team.
+    Returns
+    -------
+    list(pd.DataFrame)
+        All actions performed left to right.
+    """
+    ltr_actions = actions.copy()
+    away_idx = (actions.team_id != actions.home_team_id).values
+    for col in ['start_x', 'end_x']:
+        ltr_actions.loc[away_idx, col] = spadlconfig.field_length - actions[away_idx][col].values
+    for col in ['start_y', 'end_y']:
+        ltr_actions.loc[away_idx, col] = spadlconfig.field_width - actions[away_idx][col].values
+    return ltr_actions
+
